@@ -19,11 +19,21 @@ A sophisticated focus detection system using computer vision and machine learnin
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/FocusDetectionProject.git
+git clone https://github.com/aat666/FocusDetectionProject.git
 cd FocusDetectionProject
 ```
 
-2. Create and activate a virtual environment:
+2. Download the required model file:
+```bash
+# Create models directory
+mkdir -p models
+
+# Download the shape predictor model
+wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2 -O models/shape_predictor_68_face_landmarks.dat.bz2
+bunzip2 models/shape_predictor_68_face_landmarks.dat.bz2
+```
+
+3. Create and activate a virtual environment:
 ```bash
 python -m venv venv
 source venv/bin/activate  # On macOS/Linux
@@ -31,7 +41,7 @@ source venv/bin/activate  # On macOS/Linux
 venv\Scripts\activate  # On Windows
 ```
 
-3. Install dependencies:
+4. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
