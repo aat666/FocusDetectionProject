@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+env/
 build/
 develop-eggs/
 dist/
@@ -21,46 +22,31 @@ wheels/
 *.egg
 
 # Virtual Environment
+.env
+.venv
 venv/
 ENV/
-env/
-.env
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-.DS_Store
 
 # Project specific
+*.xlsx
 *.log
-*.dat
-*.csv
-*.json
-*.png
-*.jpg
-*.jpeg
-*.mp4
-*.avi
+models/*.dat
+!models/shape_predictor_68_face_landmarks.dat
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Unit test / coverage reports
 htmlcov/
