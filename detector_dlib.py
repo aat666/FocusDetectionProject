@@ -7,6 +7,8 @@ from scipy.spatial.transform import Rotation as R
 from scipy.spatial import distance as dist
 import subprocess  # For audio alerts
 import os
+import pandas as pd
+from datetime import datetime
 
 def play_audio_alert(sound_file="alert.wav"):
     try:
@@ -73,7 +75,8 @@ class FocusGazeDetectorDlib:
             'smoothed_angles': [],   # Smoothed head pose angles
             'gaze_ratios': [],       # Raw gaze ratios
             'focus_scores': [],      # Final focus scores
-            'penalty_scores': []     # Individual penalty contributions
+            'penalty_scores': [],     # Individual penalty contributions
+            'fatigue_scores': []     # Fatigue scores
         }
         
         # Initialize counters and metrics
@@ -390,6 +393,59 @@ class FocusGazeDetectorDlib:
                 print(f"Error in focus calculation: {str(e)}")
             return 0.0
 
+    def compute_fatigue_score(self, metrics):
+        """
+        Compute fatigue score based on various metrics.
+        
+        Args:
+            metrics (dict): Dictionary containing current metrics including:
+                - blink_rate: Blinks per minute
+                - ear: Eye aspect ratio
+                - yaw: Head yaw angle
+                - pitch: Head pitch angle
+                
+        Returns:
+            float: Fatigue score from 0 (fully alert) to 100 (extremely fatigued)
+        """
+        # Initialize fatigue score components
+        blink_fatigue = 0.0
+        ear_fatigue = 0.0
+        head_pose_fatigue = 0.0
+        
+        # Calculate blink rate fatigue (40% weight)
+        baseline_blink_rate = 15.0  # Normal blink rate per minute
+        blink_deviation = abs(metrics['blink_rate'] - baseline_blink_rate)
+        blink_fatigue = min(40.0, blink_deviation * 2.0)  # Cap at 40%
+        
+        # Calculate EAR fatigue (30% weight)
+        baseline_ear = self.baseline['ear_threshold']
+        ear_deviation = abs(metrics['ear'] - baseline_ear)
+        ear_fatigue = min(30.0, ear_deviation * 100.0)  # Cap at 30%
+        
+        # Calculate head pose fatigue (30% weight)
+        yaw_penalty = min(15.0, abs(metrics['yaw']) * 0.5)  # Cap at 15%
+        pitch_penalty = min(15.0, abs(metrics['pitch']) * 0.5)  # Cap at 15%
+        head_pose_fatigue = yaw_penalty + pitch_penalty
+        
+        # Calculate total fatigue score
+        total_fatigue = blink_fatigue + ear_fatigue + head_pose_fatigue
+        
+        # Normalize to 0-100 range
+        fatigue_score = min(100.0, total_fatigue)
+        
+        # Store fatigue score in history
+        self.metrics_history['fatigue_scores'].append(fatigue_score)
+        
+        # Log detailed breakdown if in verbose mode
+        if self.DEBUG_VERBOSE:
+            self._log_debug(f"Fatigue Score Breakdown:")
+            self._log_debug(f"  Blink Fatigue: {blink_fatigue:.1f}%")
+            self._log_debug(f"  EAR Fatigue: {ear_fatigue:.1f}%")
+            self._log_debug(f"  Head Pose Fatigue: {head_pose_fatigue:.1f}%")
+            self._log_debug(f"  Total Fatigue Score: {fatigue_score:.1f}%")
+        
+        return fatigue_score
+
     def generate_session_summary(self):
         """Generate session summary with focus statistics"""
         try:
@@ -447,7 +503,8 @@ class FocusGazeDetectorDlib:
                 'yaw': 0,
                 'pitch': 0,
                 'roll': 0,
-                'blink_rate': 0
+                'blink_rate': 0,
+                'fatigue_score': 0.0  # Add fatigue score to metrics
             }
             
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -477,6 +534,10 @@ class FocusGazeDetectorDlib:
                             self.metrics_history['blink_intervals'].append(blink_interval)
                         self.last_blink_time = current_time
                     self.blink_counter = 0
+                
+                # Calculate blink rate (blinks per minute)
+                session_duration = current_time - self.start_time
+                metrics['blink_rate'] = (self.total_blinks / session_duration) * 60 if session_duration > 0 else 0
                 
                 # Compute head pose with smoothing
                 image_points = np.array([
@@ -511,6 +572,9 @@ class FocusGazeDetectorDlib:
                 # Compute focus percentage using non-linear scoring
                 metrics['focus_percentage'] = self.compute_focus_percentage(metrics)
                 
+                # Compute fatigue score
+                metrics['fatigue_score'] = self.compute_fatigue_score(metrics)
+                
                 # Track focus history
                 self.focus_history.append(metrics['focus_percentage'])
                 
@@ -529,7 +593,7 @@ class FocusGazeDetectorDlib:
             
         except Exception as e:
             self._log_debug(f"Error in process_frame: {str(e)}", force=True)
-            return frame, {'focus_percentage': 0.0}
+            return frame, {'focus_percentage': 0.0, 'fatigue_score': 0.0}
 
     def _draw_debug_info(self, frame, metrics, current_time):
         """Draw debug information on frame"""
@@ -561,10 +625,27 @@ class FocusGazeDetectorDlib:
                      (0, 0, 255)
         cv2.rectangle(frame, (200, 165), (200 + int(focus_percentage * 2), 185),
                      focus_color, -1)
+        
+        # Draw fatigue information
+        fatigue_score = metrics['fatigue_score']
+        cv2.putText(frame, f"Fatigue: {fatigue_score:.1f}%", (10, 210),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        
+        # Draw fatigue bar
+        fatigue_color = (0, 255, 0) if fatigue_score <= 30 else \
+                       (0, 255, 255) if fatigue_score <= 60 else \
+                       (0, 0, 255)
+        cv2.rectangle(frame, (200, 195), (200 + int(fatigue_score * 2), 215),
+                     fatigue_color, -1)
 
     def cleanup(self):
-        """Enhanced cleanup with debug log closing"""
+        """Enhanced cleanup with debug log closing and metrics saving"""
         try:
+            # Save metrics to Excel
+            excel_file = self.save_metrics_to_excel()
+            if excel_file:
+                print(f"\nMetrics saved to: {excel_file}")
+            
             if self.LOG_TO_FILE and self.log_file:
                 self.log_file.close()
                 
@@ -582,7 +663,7 @@ class FocusGazeDetectorDlib:
         self._log_debug(f"Debug mode: {'ON' if enabled else 'OFF'}, Verbose: {'ON' if verbose else 'OFF'}", force=True)
 
     def set_thresholds(self, gaze_left=0.35, gaze_right=0.65, yaw=20.0, pitch=15.0):
-        """Set detection thresholds"""
+        """Set detection thresholds for gaze and head pose."""
         self.GAZE_LEFT_THRESHOLD = gaze_left
         self.GAZE_RIGHT_THRESHOLD = gaze_right
         self.YAW_THRESHOLD = yaw
@@ -593,3 +674,57 @@ class FocusGazeDetectorDlib:
                 f"Updated thresholds - Gaze L: {gaze_left:.3f}, "
                 f"R: {gaze_right:.3f}, Yaw: {yaw}°, Pitch: {pitch}°"
             )
+
+    def save_metrics_to_excel(self, filename=None):
+        """
+        Save focus and fatigue metrics to an Excel file.
+        
+        Args:
+            filename (str, optional): Name of the Excel file. If None, generates a timestamp-based name.
+        """
+        try:
+            # Calculate averages
+            avg_focus = np.mean(self.focus_history) if self.focus_history else 0
+            avg_fatigue = np.mean(self.metrics_history['fatigue_scores']) if self.metrics_history['fatigue_scores'] else 0
+            
+            # Calculate session duration
+            session_duration = time.time() - self.start_time
+            hours = int(session_duration // 3600)
+            minutes = int((session_duration % 3600) // 60)
+            seconds = int(session_duration % 60)
+            duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            
+            # Create metrics dictionary
+            metrics_data = {
+                'Metric': ['Average Focus Score', 'Average Fatigue Score', 'Session Duration', 'Total Frames', 'Total Blinks'],
+                'Value': [
+                    f"{avg_focus:.2f}%",
+                    f"{avg_fatigue:.2f}%",
+                    duration_str,
+                    self.frame_count,
+                    self.total_blinks
+                ]
+            }
+            
+            # Create DataFrame
+            df = pd.DataFrame(metrics_data)
+            
+            # Generate filename if not provided
+            if filename is None:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"focus_metrics_{timestamp}.xlsx"
+            
+            # Save to Excel
+            df.to_excel(filename, index=False)
+            
+            if self.DEBUG_VERBOSE:
+                self._log_debug(f"Metrics saved to {filename}")
+                self._log_debug(f"Average Focus Score: {avg_focus:.2f}%")
+                self._log_debug(f"Average Fatigue Score: {avg_fatigue:.2f}%")
+            
+            return filename
+            
+        except Exception as e:
+            if self.DEBUG_VERBOSE:
+                self._log_debug(f"Error saving metrics to Excel: {str(e)}")
+            return None

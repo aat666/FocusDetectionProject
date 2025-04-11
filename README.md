@@ -1,19 +1,26 @@
-# Focus Detection Project
+# Focus Detection System
 
-A sophisticated focus detection system using computer vision and machine learning techniques to analyze facial features and determine attention levels.
+A real-time focus and fatigue detection system using computer vision and facial landmarks.
 
 ## Features
 
-- Real-time face detection and tracking
-- 68-point facial landmark detection
-- Eye aspect ratio (EAR) calculation
-- Head pose estimation
-- Gaze direction tracking
-- Blink detection and rate calculation
-- Personalized calibration system
-- Focus scoring algorithm
-- Comprehensive data visualization
-- Dataset evaluation capabilities
+- Real-time face and eye tracking
+- Focus score calculation based on:
+  - Gaze direction
+  - Head pose
+  - Blink rate
+- Fatigue detection using:
+  - Eye aspect ratio (EAR)
+  - Blink patterns
+  - Head movement
+- Excel report generation
+- User-friendly GUI interface
+
+## Requirements
+
+- Python 3.7+
+- Webcam
+- Required Python packages (see requirements.txt)
 
 ## Installation
 
@@ -23,54 +30,72 @@ git clone https://github.com/aat666/FocusDetectionProject.git
 cd FocusDetectionProject
 ```
 
-2. Download the required model file:
+2. Create and activate a virtual environment:
 ```bash
-# Create models directory
-mkdir -p models
-
-# Download the shape predictor model
-wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2 -O models/shape_predictor_68_face_landmarks.dat.bz2
-bunzip2 models/shape_predictor_68_face_landmarks.dat.bz2
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
-3. Create and activate a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On macOS/Linux
-# or
-venv\Scripts\activate  # On Windows
-```
-
-4. Install dependencies:
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-### System Requirements
-
-- Python 3.7+
-- OpenCV
-- dlib
-- NumPy
-- Matplotlib
-- Other dependencies listed in requirements.txt
+4. Download the dlib shape predictor:
+```bash
+mkdir models
+cd models
+wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+bunzip2 shape_predictor_68_face_landmarks.dat.bz2
+cd ..
+```
 
 ## Usage
 
-### Real-time Focus Detection
+### GUI Mode (Recommended)
+
+Run the GUI application:
+```bash
+python gui.py
+```
+
+The GUI provides:
+- Start/Stop detection
+- Calibration
+- Real-time metrics display
+- Excel report generation
+
+### Command Line Mode
+
+Run the basic detection:
 ```bash
 python main.py
 ```
 
-### Dataset Evaluation
-```bash
-python offline_evaluation.py
-```
+Controls:
+- Press 'c' to calibrate
+- Press 'q' to quit
 
-### Calibration Mode
-```bash
-python main.py --calibrate
-```
+## Metrics
+
+The system tracks:
+- Focus percentage (0-100%)
+- Fatigue score (0-100%)
+- Blink count
+- Session duration
+
+## Excel Reports
+
+Metrics are automatically saved to Excel files with:
+- Average focus score
+- Average fatigue score
+- Session duration
+- Total frames processed
+- Total blinks
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Project Structure
 
@@ -99,10 +124,6 @@ FocusDetectionProject/
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 

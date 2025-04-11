@@ -1,15 +1,17 @@
 # Core Dependencies
-numpy>=1.21.0
-opencv-python>=4.5.3.56
+numpy>=1.19.0
+opencv-python>=4.5.0
 dlib>=19.22.0
-scipy>=1.7.1
+scipy>=1.6.0
 matplotlib>=3.4.3
 
 # Additional Dependencies
 imutils>=0.5.4  # For image processing utilities
 tqdm>=4.62.3    # For progress bars
-pandas>=1.3.3   # For data analysis
+pandas>=1.2.0   # For data analysis
 seaborn>=0.11.2 # For enhanced visualizations
+openpyxl>=3.0.0
+Pillow>=8.0.0
 
 # Optional Dependencies
 # Uncomment if needed for specific features
