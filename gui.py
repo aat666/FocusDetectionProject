@@ -69,7 +69,6 @@ class FocusDetectionGUI:
         self.root = root
         self.root.title("Focus Detection System")
         self.root.geometry("1400x9000")  # Increased from 1200x800
-        
         # Initialize variables
         self.is_running = False
         self.detector = None

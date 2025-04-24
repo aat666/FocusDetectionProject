@@ -743,7 +743,7 @@ def main():
             if not ret:
                 print("Error: Could not read from camera")
                 break
-            
+
             # Process frame
             display_frame, metrics = detector.process_frame(frame)
             
@@ -758,7 +758,7 @@ def main():
                 print("\nStarting calibration...")
                 detector.start_calibration()
                 print("Calibration completed!")
-    
+
     except Exception as e:
         print(f"Error during execution: {e}")
     
